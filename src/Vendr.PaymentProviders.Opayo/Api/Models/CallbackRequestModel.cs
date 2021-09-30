@@ -1,11 +1,13 @@
 ﻿using System.Linq;
+using System.Net.Http;
+using System.Threading.Tasks;
 using System.Web;
 
 namespace Vendr.PaymentProviders.Opayo.Api.Models
 {
     public class CallbackRequestModel
     {
-        public CallbackRequestModel(HttpRequestBase request)
+        public CallbackRequestModel(HttpRequestMessage request)
         {
             RawRequest = request;
         }
@@ -34,36 +36,38 @@ namespace Vendr.PaymentProviders.Opayo.Api.Models
         public string FraudResponse { get; set; }
         public string BankAuthCode { get; set; }
         public decimal? Surcharge { get; set; }
-        public HttpRequestBase RawRequest { get; }
+        public HttpRequestMessage RawRequest { get; }
 
-        public static CallbackRequestModel FromRequest(HttpRequestBase request)
+        public static async Task<CallbackRequestModel> FromRequestAsync(HttpRequestMessage request)
         {
+            var formData = await request.Content.ReadAsFormDataAsync();
+
             return new CallbackRequestModel(request)
             {
-                Status = request.Form.Get(nameof(Status)),
-                StatusDetail = request.Form.Get(nameof(StatusDetail)),
-                GiftAid = request.Form.Get(nameof(GiftAid)),
-                TxType = request.Form.Get(nameof(TxType)),
-                VendorTxCode = request.Form.Get(nameof(VendorTxCode)),
-                VPSProtocol = request.Form.Get(nameof(VPSProtocol)),
-                VPSSignature = request.Form.Get(nameof(VPSSignature)),
-                VPSTxId = request.Form.Get(nameof(VPSTxId)),
-                TxAuthNo = request.Form.Get(nameof(TxAuthNo)),
-                AVSCV2 = HttpUtility.UrlDecode(request.Form.Get(nameof(AVSCV2))),
-                AddressResult = HttpUtility.UrlDecode(request.Form.Get(nameof(AddressResult))),
-                AddressStatus = HttpUtility.UrlDecode(request.Form.Get(nameof(AddressStatus))),
-                PostCodeResult = HttpUtility.UrlDecode(request.Form.Get(nameof(PostCodeResult))),
-                CV2Result = HttpUtility.UrlDecode(request.Form.Get(nameof(CV2Result))),
-                SecureStatus = request.Form.Get("3DSecureStatus"),
-                CAVV = request.Form.Get(nameof(CAVV)),
-                PayerStatus = HttpUtility.UrlDecode(request.Form.Get(nameof(PayerStatus))),
-                CardType = request.Form.Get(nameof(CardType)),
-                Last4Digits = request.Form.Get(nameof(Last4Digits)),
-                DeclineCode = HttpUtility.UrlDecode(request.Form.Get(nameof(DeclineCode))),
-                ExpiryDate = HttpUtility.UrlDecode(request.Form.Get(nameof(ExpiryDate))),
-                FraudResponse = HttpUtility.UrlDecode(request.Form.Get(nameof(FraudResponse))),
-                BankAuthCode = HttpUtility.UrlDecode(request.Form.Get(nameof(BankAuthCode))),
-                Surcharge = request.Form.AllKeys.Any(k => k.Equals(nameof(Surcharge))) ? decimal.Parse(request.Form.Get(nameof(Surcharge))) : decimal.Zero
+                Status = formData.Get(nameof(Status)),
+                StatusDetail = formData.Get(nameof(StatusDetail)),
+                GiftAid = formData.Get(nameof(GiftAid)),
+                TxType = formData.Get(nameof(TxType)),
+                VendorTxCode = formData.Get(nameof(VendorTxCode)),
+                VPSProtocol = formData.Get(nameof(VPSProtocol)),
+                VPSSignature = formData.Get(nameof(VPSSignature)),
+                VPSTxId = formData.Get(nameof(VPSTxId)),
+                TxAuthNo = formData.Get(nameof(TxAuthNo)),
+                AVSCV2 = HttpUtility.UrlDecode(formData.Get(nameof(AVSCV2))),
+                AddressResult = HttpUtility.UrlDecode(formData.Get(nameof(AddressResult))),
+                AddressStatus = HttpUtility.UrlDecode(formData.Get(nameof(AddressStatus))),
+                PostCodeResult = HttpUtility.UrlDecode(formData.Get(nameof(PostCodeResult))),
+                CV2Result = HttpUtility.UrlDecode(formData.Get(nameof(CV2Result))),
+                SecureStatus = formData.Get("3DSecureStatus"),
+                CAVV = formData.Get(nameof(CAVV)),
+                PayerStatus = HttpUtility.UrlDecode(formData.Get(nameof(PayerStatus))),
+                CardType = formData.Get(nameof(CardType)),
+                Last4Digits = formData.Get(nameof(Last4Digits)),
+                DeclineCode = HttpUtility.UrlDecode(formData.Get(nameof(DeclineCode))),
+                ExpiryDate = HttpUtility.UrlDecode(formData.Get(nameof(ExpiryDate))),
+                FraudResponse = HttpUtility.UrlDecode(formData.Get(nameof(FraudResponse))),
+                BankAuthCode = HttpUtility.UrlDecode(formData.Get(nameof(BankAuthCode))),
+                Surcharge = formData.AllKeys.Any(k => k.Equals(nameof(Surcharge))) ? decimal.Parse(formData.Get(nameof(Surcharge))) : decimal.Zero
             };
         }
     }

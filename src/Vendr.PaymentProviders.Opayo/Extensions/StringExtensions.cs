@@ -1,7 +1,7 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
 using Vendr.Core.Models;
-using Vendr.Core.Web;
+using Vendr.Extensions;
 
 namespace Vendr.PaymentProviders.Opayo
 {

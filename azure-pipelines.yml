@@ -8,6 +8,7 @@ trigger:
     include: 
       - dev
       - hotfix/*
+      - release/*
   tags:
     include:
       - v*
@@ -62,7 +63,7 @@ stages:
           steps:
 
           - powershell: |
-              # get the umbraco package file (assumes there is just one zip file package)
+              # get the umbraco package file (assumes there is only one zip file package)
               $f = (Get-ChildItem -Path "$(Pipeline.Workspace)\BuildArtifacts\packages\*" -File -Include $(packageName).*.zip | Select-Object -First 1).FullName
               # assign the filename to a variable        
               echo "$f"       

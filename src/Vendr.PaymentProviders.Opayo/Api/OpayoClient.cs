@@ -6,27 +6,28 @@ using System.Net.Http;
 using System.Text;
 using System.Web;
 using Vendr.PaymentProviders.Opayo.Api.Models;
-using Vendr.Core;
-using Vendr.Core.Logging;
+using Vendr.Common.Logging;
 using Vendr.Core.Models;
-using Vendr.Core.Web.PaymentProviders;
+using Vendr.Core.PaymentProviders;
+using Vendr.Extensions;
+using System.Threading.Tasks;
 
 namespace Vendr.PaymentProviders.Opayo.Api
 {
     public class OpayoServerClient
     {
-        private readonly ILogger logger;
-        private readonly OpayoServerClientConfig config;
+        private readonly ILogger<OpayoServerPaymentProvider> _logger;
+        private readonly OpayoServerClientConfig _config;
 
-        public OpayoServerClient(ILogger logger, OpayoServerClientConfig config)
+        public OpayoServerClient(ILogger<OpayoServerPaymentProvider> logger, OpayoServerClientConfig config)
         {
-            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            this.config = config ?? throw new ArgumentNullException(nameof(config));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _config = config ?? throw new ArgumentNullException(nameof(config));
         }
 
-        public Dictionary<string, string> InitiateTransaction(bool useTestMode, Dictionary<string, string> inputFields)
+        public async Task<Dictionary<string, string>> InitiateTransactionAsync(bool useTestMode, Dictionary<string, string> inputFields)
         {
-            var rawResponse = MakePostRequest(
+            var rawResponse = await MakePostRequestAsync(
                 GetMethodUrl(inputFields[OpayoConstants.TransactionRequestFields.TransactionType], useTestMode),
                 inputFields);
 
@@ -97,29 +98,28 @@ namespace Vendr.PaymentProviders.Opayo.Api
             return string.Empty;
         }
 
-        private string MakePostRequest(string url, IDictionary<string, string> inputFields)
+        private async Task<string> MakePostRequestAsync(string url, IDictionary<string, string> inputFields)
         {
             try
             {
                 string requestContents = string.Empty;
+
                 if (inputFields != null)
                 {
                     requestContents = string.Join("&", (
                         from i in inputFields
                         select string.Format("{0}={1}", i.Key, HttpUtility.UrlEncode(i.Value))).ToArray<string>());
                 }
+
                 var request = new FlurlRequest(url)
                     .SetQueryParams(inputFields, Flurl.NullValueHandling.Remove);
-                var response = request
-                    .PostAsync(null)
-                    .ReceiveString()
-                    .Result;
 
-                return response;
+                return await request
+                    .PostAsync(null)
+                    .ReceiveString();
             }
             catch (FlurlHttpException ex)
             {
-
                 return string.Empty;
             }
         }
@@ -135,7 +135,8 @@ namespace Vendr.PaymentProviders.Opayo.Api
 
         private CallbackResult GenerateOkCallbackResponse(OrderReadOnly order, CallbackRequestModel request, OpayoSettings settings)
         {
-            logger.Warn<OpayoServerClient>("Payment transaction okay:\n\tOpayoTx: {VPSTxId}", request.VPSTxId);
+            _logger.Warn("Payment transaction okay:\n\tOpayoTx: {VPSTxId}", request.VPSTxId);
+
             var validSig = ValidateVpsSigniture(order, request, settings);
 
             return new CallbackResult
@@ -167,7 +168,7 @@ namespace Vendr.PaymentProviders.Opayo.Api
 
         private CallbackResult GenerateAuthenticatedCallbackResponse(OrderReadOnly order, CallbackRequestModel request, OpayoSettings settings)
         {
-            logger.Warn<OpayoServerClient>("Payment transaction Authenticated:\n\tOpayoTx: {VPSTxId}", request.VPSTxId);
+            _logger.Warn("Payment transaction Authenticated:\n\tOpayoTx: {VPSTxId}", request.VPSTxId);
             
             var validSig = ValidateVpsSigniture(order, request, settings);
 
@@ -191,7 +192,7 @@ namespace Vendr.PaymentProviders.Opayo.Api
 
         private CallbackResult GenerateNotAuthorisedCallbackResponse(OrderReadOnly order, CallbackRequestModel request, OpayoSettings settings)
         {
-            logger.Warn<OpayoServerClient>("Payment transaction not authorised:\n\tOpayoTx: {VPSTxId}", request.VPSTxId);
+            _logger.Warn("Payment transaction not authorised:\n\tOpayoTx: {VPSTxId}", request.VPSTxId);
             
             var validSig = ValidateVpsSigniture(order, request, settings);
 
@@ -224,7 +225,7 @@ namespace Vendr.PaymentProviders.Opayo.Api
 
         private CallbackResult GeneratePendingCallbackResponse(OrderReadOnly order, CallbackRequestModel request, OpayoSettings settings)
         {
-            logger.Warn<OpayoServerClient>("Payment transaction pending:\n\tOpayoTx: {VPSTxId}", request.VPSTxId);
+            _logger.Warn("Payment transaction pending:\n\tOpayoTx: {VPSTxId}", request.VPSTxId);
             
             var validSig = ValidateVpsSigniture(order, request, settings);
 
@@ -250,7 +251,7 @@ namespace Vendr.PaymentProviders.Opayo.Api
 
         private CallbackResult GenerateAbortedCallbackResponse(OrderReadOnly order, CallbackRequestModel request, OpayoSettings settings)
         {
-            logger.Warn<OpayoServerClient>("Payment transaction aborted:\n\tOpayoTx: {VPSTxId}\n\tDetail: {StatusDetail}", request.VPSTxId, request.StatusDetail);
+            _logger.Warn("Payment transaction aborted:\n\tOpayoTx: {VPSTxId}\n\tDetail: {StatusDetail}", request.VPSTxId, request.StatusDetail);
             
             var validSig = ValidateVpsSigniture(order, request, settings);
 
@@ -267,7 +268,7 @@ namespace Vendr.PaymentProviders.Opayo.Api
 
         private CallbackResult GenerateRejectedCallbackResponse(OrderReadOnly order, CallbackRequestModel request, OpayoSettings settings)
         {
-            logger.Warn<OpayoServerClient>("Payment transaction rejected:\n\tOpayoTx: {VPSTxId}\n\tDetail: {StatusDetail}", request.VPSTxId, request.StatusDetail);
+            _logger.Warn("Payment transaction rejected:\n\tOpayoTx: {VPSTxId}\n\tDetail: {StatusDetail}", request.VPSTxId, request.StatusDetail);
             
             var validSig = ValidateVpsSigniture(order, request, settings);
 
@@ -284,7 +285,7 @@ namespace Vendr.PaymentProviders.Opayo.Api
 
         private CallbackResult GenerateErrorCallbackResponse(OrderReadOnly order, CallbackRequestModel request, OpayoSettings settings)
         {
-            logger.Warn<OpayoServerClient>("Payment transaction error:\n\tOpayoTx: {VPSTxId}\n\tDetail: {StatusDetail}", request.VPSTxId, request.StatusDetail);
+            _logger.Warn("Payment transaction error:\n\tOpayoTx: {VPSTxId}\n\tDetail: {StatusDetail}", request.VPSTxId, request.StatusDetail);
             
             var validSig = ValidateVpsSigniture(order, request, settings);
 
@@ -334,7 +335,7 @@ namespace Vendr.PaymentProviders.Opayo.Api
         {
             var responseBody = new StringBuilder();
             responseBody.AppendLine($"{OpayoConstants.Response.Status}={OpayoConstants.Response.StatusCodes.Ok}");
-            responseBody.AppendLine($"{OpayoConstants.Response.RedirectUrl}={config.ContinueUrl}");
+            responseBody.AppendLine($"{OpayoConstants.Response.RedirectUrl}={_config.ContinueUrl}");
             return new StringContent(responseBody.ToString());
         }
 
@@ -342,7 +343,7 @@ namespace Vendr.PaymentProviders.Opayo.Api
         {
             var responseBody = new StringBuilder();
             responseBody.AppendLine($"{OpayoConstants.Response.Status}={OpayoConstants.Response.StatusCodes.Ok}");
-            responseBody.AppendLine($"{OpayoConstants.Response.RedirectUrl}={config.CancelUrl}");
+            responseBody.AppendLine($"{OpayoConstants.Response.RedirectUrl}={_config.CancelUrl}");
             return new StringContent(responseBody.ToString());
         }
 
@@ -350,7 +351,7 @@ namespace Vendr.PaymentProviders.Opayo.Api
         {
             var responseBody = new StringBuilder();
             responseBody.AppendLine($"{OpayoConstants.Response.Status}={OpayoConstants.Response.StatusCodes.Ok}");
-            responseBody.AppendLine($"{OpayoConstants.Response.RedirectUrl}={MakeUrlAbsolute(config.ErrorUrl)}");
+            responseBody.AppendLine($"{OpayoConstants.Response.RedirectUrl}={_config.ErrorUrl}");
             return new StringContent(responseBody.ToString());
         }
 
@@ -358,32 +359,8 @@ namespace Vendr.PaymentProviders.Opayo.Api
         {
             var responseBody = new StringBuilder();
             responseBody.AppendLine($"{OpayoConstants.Response.Status}={OpayoConstants.Response.StatusCodes.Error}");
-            responseBody.AppendLine($"{OpayoConstants.Response.RedirectUrl}={MakeUrlAbsolute(config.ErrorUrl)}");
+            responseBody.AppendLine($"{OpayoConstants.Response.RedirectUrl}={_config.ErrorUrl}");
             return new StringContent(responseBody.ToString());
-        }
-
-        private string MakeUrlAbsolute(string url)
-        {
-            if (Uri.TryCreate(url, UriKind.Absolute, out var result))
-                return result.ToString();
-
-            var request = HttpContext.Current.Request;
-
-            var scheme = request.Headers["X-Forwarded-Proto"];
-            if (string.IsNullOrWhiteSpace(scheme))
-            {
-                scheme = request.Url.Scheme;
-            }
-
-            var host = request.Headers["X-Original-Host"];
-            if (string.IsNullOrWhiteSpace(host))
-            {
-                host = request.Url.Host;
-            }
-
-            Uri baseUrl = (new UriBuilder(scheme, host, (!(scheme == "https") || !(host != "localhost") ? request.Url.Port : 443))).Uri;
-            
-            return new Uri(baseUrl, url).AbsoluteUri;
         }
 
     }
