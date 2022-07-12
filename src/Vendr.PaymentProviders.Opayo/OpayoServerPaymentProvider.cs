@@ -60,7 +60,10 @@ namespace Vendr.PaymentProviders.Opayo
             });
 
             var inputFields = OpayoInputLoader.LoadInputs(ctx.Order, ctx.Settings, Vendr, ctx.Urls.CallbackUrl);
-            var responseDetails = await client.InitiateTransactionAsync(ctx.Settings.TestMode, inputFields);
+            var responseDetails = 
+                Task.Run( () => 
+                    client.InitiateTransactionAsync(ctx.Settings.TestMode, inputFields)
+                ).GetAwaiter().GetResult();
 
             var status = responseDetails[OpayoConstants.Response.Status];
 
