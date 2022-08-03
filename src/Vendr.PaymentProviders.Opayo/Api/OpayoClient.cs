@@ -29,7 +29,7 @@ namespace Vendr.PaymentProviders.Opayo.Api
         {
             var rawResponse = await MakePostRequestAsync(
                 GetMethodUrl(inputFields[OpayoConstants.TransactionRequestFields.TransactionType], useTestMode),
-                inputFields);
+                inputFields).ConfigureAwait(false);
 
             return GetFields(rawResponse);
 
@@ -116,7 +116,8 @@ namespace Vendr.PaymentProviders.Opayo.Api
 
                 return await request
                     .PostAsync(null)
-                    .ReceiveString();
+                    .ReceiveString()
+                    .ConfigureAwait(false);
             }
             catch (FlurlHttpException ex)
             {
