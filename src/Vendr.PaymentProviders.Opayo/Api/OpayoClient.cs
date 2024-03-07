@@ -61,41 +61,12 @@ namespace Vendr.PaymentProviders.Opayo.Api
 
         private string GetMethodUrl(string type, bool testMode)
         {
-            switch (testMode)
+            if (testMode)
             {
-                case false:
-                    switch (type.ToUpperInvariant())
-                    {
-                        case "AUTHORISE":
-                            return "https://live.sagepay.com/gateway/service/authorise.vsp";
-                        case "PAYMENT":
-                        case "DEFERRED":
-                        case "AUTHENTICATE":
-                            return "https://live.sagepay.com/gateway/service/vspserver-register.vsp";
-                        case "CANCEL":
-                            return "https://live.sagepay.com/gateway/service/cancel.vsp";
-                        case "REFUND":
-                            return "https://live.sagepay.com/gateway/service/refund.vsp";
-                    }
-                    break;
-                case true:
-                    switch (type.ToUpperInvariant())
-                    {
-                        case "AUTHORISE":
-                            return "https://test.sagepay.com/gateway/service/authorise.vsp";
-                        case "PAYMENT":
-                        case "DEFERRED":
-                        case "AUTHENTICATE":
-                            return "https://test.sagepay.com/gateway/service/vspserver-register.vsp";
-                        case "CANCEL":
-                            return "https://test.sagepay.com/gateway/service/cancel.vsp";
-                        case "REFUND":
-                            return "https://test.sagepay.com/gateway/service/refund.vsp";
-                    }
-                    break;
+                return OpayoEndpoints.TestEndpoints[type.ToUpperInvariant()];
             }
 
-            return string.Empty;
+            return OpayoEndpoints.LiveEndpoints[type.ToUpperInvariant()];
         }
 
         private async Task<string> MakePostRequestAsync(string url, IDictionary<string, string> inputFields)
