@@ -4,13 +4,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
+using System.Threading.Tasks;
 using System.Web;
-using Vendr.PaymentProviders.Opayo.Api.Models;
 using Vendr.Common.Logging;
 using Vendr.Core.Models;
 using Vendr.Core.PaymentProviders;
 using Vendr.Extensions;
-using System.Threading.Tasks;
+using Vendr.PaymentProviders.Opayo.Api.Models;
 
 namespace Vendr.PaymentProviders.Opayo.Api
 {
@@ -28,7 +28,7 @@ namespace Vendr.PaymentProviders.Opayo.Api
         public async Task<Dictionary<string, string>> InitiateTransactionAsync(bool useTestMode, Dictionary<string, string> inputFields)
         {
             var rawResponse = await MakePostRequestAsync(
-                GetMethodUrl(inputFields[OpayoConstants.TransactionRequestFields.TransactionType], useTestMode),
+                OpayoEndpoints.Get(inputFields[OpayoConstants.TransactionRequestFields.TransactionType], useTestMode),
                 inputFields).ConfigureAwait(false);
 
             return GetFields(rawResponse);
@@ -57,16 +57,6 @@ namespace Vendr.PaymentProviders.Opayo.Api
                 default:
                     return CallbackResult.Empty;
             }
-        }
-
-        private string GetMethodUrl(string type, bool testMode)
-        {
-            if (testMode)
-            {
-                return OpayoEndpoints.TestEndpoints[type.ToUpperInvariant()];
-            }
-
-            return OpayoEndpoints.LiveEndpoints[type.ToUpperInvariant()];
         }
 
         private async Task<string> MakePostRequestAsync(string url, IDictionary<string, string> inputFields)
@@ -141,11 +131,11 @@ namespace Vendr.PaymentProviders.Opayo.Api
         private CallbackResult GenerateAuthenticatedCallbackResponse(OrderReadOnly order, CallbackRequestModel request, OpayoSettings settings)
         {
             _logger.Warn("Payment transaction Authenticated:\n\tOpayoTx: {VPSTxId}", request.VPSTxId);
-            
+
             var validSig = ValidateVpsSigniture(order, request, settings);
 
             return new CallbackResult
-            {                
+            {
                 HttpResponse = new HttpResponseMessage(System.Net.HttpStatusCode.OK)
                 {
                     Content = validSig
@@ -165,7 +155,7 @@ namespace Vendr.PaymentProviders.Opayo.Api
         private CallbackResult GenerateNotAuthorisedCallbackResponse(OrderReadOnly order, CallbackRequestModel request, OpayoSettings settings)
         {
             _logger.Warn("Payment transaction not authorised:\n\tOpayoTx: {VPSTxId}", request.VPSTxId);
-            
+
             var validSig = ValidateVpsSigniture(order, request, settings);
 
             return new CallbackResult
@@ -198,7 +188,7 @@ namespace Vendr.PaymentProviders.Opayo.Api
         private CallbackResult GeneratePendingCallbackResponse(OrderReadOnly order, CallbackRequestModel request, OpayoSettings settings)
         {
             _logger.Warn("Payment transaction pending:\n\tOpayoTx: {VPSTxId}", request.VPSTxId);
-            
+
             var validSig = ValidateVpsSigniture(order, request, settings);
 
             return new CallbackResult
@@ -224,7 +214,7 @@ namespace Vendr.PaymentProviders.Opayo.Api
         private CallbackResult GenerateAbortedCallbackResponse(OrderReadOnly order, CallbackRequestModel request, OpayoSettings settings)
         {
             _logger.Warn("Payment transaction aborted:\n\tOpayoTx: {VPSTxId}\n\tDetail: {StatusDetail}", request.VPSTxId, request.StatusDetail);
-            
+
             var validSig = ValidateVpsSigniture(order, request, settings);
 
             return new CallbackResult
@@ -241,7 +231,7 @@ namespace Vendr.PaymentProviders.Opayo.Api
         private CallbackResult GenerateRejectedCallbackResponse(OrderReadOnly order, CallbackRequestModel request, OpayoSettings settings)
         {
             _logger.Warn("Payment transaction rejected:\n\tOpayoTx: {VPSTxId}\n\tDetail: {StatusDetail}", request.VPSTxId, request.StatusDetail);
-            
+
             var validSig = ValidateVpsSigniture(order, request, settings);
 
             return new CallbackResult
@@ -258,7 +248,7 @@ namespace Vendr.PaymentProviders.Opayo.Api
         private CallbackResult GenerateErrorCallbackResponse(OrderReadOnly order, CallbackRequestModel request, OpayoSettings settings)
         {
             _logger.Warn("Payment transaction error:\n\tOpayoTx: {VPSTxId}\n\tDetail: {StatusDetail}", request.VPSTxId, request.StatusDetail);
-            
+
             var validSig = ValidateVpsSigniture(order, request, settings);
 
             return new CallbackResult
